@@ -49,7 +49,6 @@ void Document::load(std::string path)
                     if (c == ' ') { piece.space_follows = true; }
                     else if (c == '\t') { piece.tab_follows = true; }
                     add_piece(piece);
-                    std::cout << "piece: \"" << piece.text << "\"\n";
                 }
                 buf = std::stringstream();
             }
@@ -58,7 +57,6 @@ void Document::load(std::string path)
                     TextPiece piece;
                     piece.text = buf.str();
                     add_piece(piece);
-                    std::cout << "piece: \"" << piece.text << "\" (+endl)\n";
                 }
                 add_line();
                 buf = std::stringstream();
