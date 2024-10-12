@@ -25,8 +25,8 @@ std::array<char const*, 2> DEFAULT_FONT_PATHS = {
 class Settings {
 public:
     uint32_t font_size = 32u;
-    SDL_Color background_color = SDL_Color{ 192, 192, 192, 255 };
-    SDL_Color text_color = SDL_Color{ 0, 0, 0, 255 };
+    sdl::Color background_color = sdl::Color(192, 192, 192);
+    sdl::Color text_color = sdl::Color(0, 0, 0);
 };
 
 int main(int argc, char** argv)
@@ -43,46 +43,48 @@ int main(int argc, char** argv)
 
     Settings settings;
 
-    Document document;
+    const std::string FONT_NAME = "/usr/share/fonts/liberation/LiberationMono-Regular.ttf";
+    auto font = std::make_shared<sdl::Font>(FONT_NAME, settings.font_size);
+
+    Document document(font);
     document.load(file_name);
     std::cout << "loaded file: " << file_name << " (" << document.size() << " lines)\n";
-
-    const std::string FONT_NAME = "/usr/share/fonts/liberation/LiberationMono-Regular.ttf";
-    sdl::Font font(FONT_NAME, settings.font_size);
 
     auto window = std::make_unique<sdl::Window>("Viewer - " + file_name, sdl::Size2d(1024, 1024));
     auto renderer = std::make_unique<sdl::Renderer>(*window);
 
     auto top_visible_line = 0u;
     auto left_skip = 0u;
-    auto lines_visible = renderer->get_output_size().h / font.get_line_skip();
+    auto lines_visible = renderer->get_output_size().h / font->get_line_skip();
     auto max_line_width = 0u;
     const auto HORIZONTAL_SCROLL_AMOUNT = 128;
 
     auto on_redraw = [&] {
-        auto viewport_width = renderer->get_output_size().w;
+        auto viewport_size = renderer->get_output_size();
         max_line_width = 0u;
         auto topleft = sdl::Point2d(-left_skip, 0);
 
-        renderer->fill_rect(sdl::Rect(0, 0, renderer->get_output_size()), settings.background_color);
+        renderer->fill_rect(sdl::Rect(0, 0, viewport_size), settings.background_color);
 
+        // for each line...
         for (auto i = top_visible_line; i < std::min(size_t(top_visible_line + lines_visible), document.size()); i++) {
 
             // render all pieces on the line
-            auto line = document.get_line(i);
-            for (auto piece : line.pieces) {
+            auto& line = document.get_line(i);
+            for (auto& piece : line.pieces) {
                 if (!piece.empty()) {
-                    auto line_texture = renderer->texture_from_surface(*font.render(piece.text, settings.text_color));
-                    max_line_width = std::max(max_line_width, line_texture->get_size().w);
-                    renderer->put_texture(*line_texture, sdl::Rect(topleft, line_texture->get_size()));
-                    topleft.x += line_texture->get_size().w;
-                    topleft.x += font.get_space_width();
+                    auto piece_texture = renderer->texture_from_surface(
+                        *font->render(piece.get_text(), sdl::Color::BLACK));
+                    max_line_width = std::max(max_line_width, piece_texture->get_size().w);
+                    renderer->put_texture(*piece_texture, sdl::Rect(topleft, piece_texture->get_size()));
+                    topleft.x += piece_texture->get_size().w;
+                    topleft.x += font->get_space_width();
                 }
             }
 
             // new line
             topleft.x = -left_skip;
-            topleft.y += font.get_line_skip();
+            topleft.y += font->get_line_skip();
         }
 
         renderer->present();

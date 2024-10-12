@@ -28,46 +28,8 @@ uint64_t sdl::get_ticks()
     return SDL_GetTicks();
 }
 
-#if 0
-std::unique_ptr<sdl::Event> sdl::event_from_sdl(SDL_Event& ev)
-{
-    if (ev.type == SDL_QUIT) {
-        return std::make_unique<sdl::QuitRequestEvent>();
-    }
-    else if (ev.type == SDL_MOUSEMOTION) {
-        return std::make_unique<sdl::MouseMotionEvent>(
-            sdl::Point2d(ev.motion.x, ev.motion.y));
-    }
-    else if (ev.type == SDL_MOUSEBUTTONDOWN) {
-        return std::make_unique<sdl::MouseButtonEvent>(
-            sdl::Point2d(ev.button.x, ev.button.y),
-            static_cast<uint32_t>(ev.button.button),
-            true);
-    }
-    else if (ev.type == SDL_MOUSEBUTTONUP) {
-        return std::make_unique<sdl::MouseButtonEvent>(
-            sdl::Point2d(ev.button.x, ev.button.y),
-            static_cast<uint32_t>(ev.button.button),
-            false);
-    }
-    else if (ev.type == SDL_MOUSEWHEEL) {
-        return std::make_unique<sdl::MouseWheelEvent>(
-            sdl::Point2d(ev.wheel.mouseX, ev.wheel.mouseY),
-            sdl::Point2d(ev.wheel.x, ev.wheel.y));
-    }
-    else {
-        return std::make_unique<sdl::UnknownEvent>();
-    }
-}
-
-std::unique_ptr<sdl::Event> sdl::poll_event() {
-    SDL_Event event;
-    if (!SDL_PollEvent(&event)) {
-        return std::make_unique<sdl::EmptyEvent>();
-    }
-    return sdl::event_from_sdl(event);
-}
-#endif
+const sdl::Color sdl::Color::WHITE = sdl::Color(255, 255, 255);
+const sdl::Color sdl::Color::BLACK = sdl::Color(0, 0, 0);
 
 bool sdl::poll_event(SDL_Event& event) {
     return !!SDL_PollEvent(&event);

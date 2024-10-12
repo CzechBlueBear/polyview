@@ -1,4 +1,5 @@
 #include "document.hpp"
+#include <cstring>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdexcept>
@@ -13,19 +14,20 @@ void Document::add_line()
     m_lines.push_back(Line());
 }
 
-void Document::add_piece(TextPiece const& piece)
+void Document::add_piece(TextPiece&& piece)
 {
     if (m_lines.empty()) {
         m_lines.push_back(Line());
     }
-    m_lines.back().pieces.push_back(piece);
+    m_lines.back().pieces.push_back(std::move(piece));
 }
 
 void Document::load(std::string path)
 {
     FILE* f = fopen(path.c_str(), "rb");
-
-    const uint16_t COLUMNS_PER_TAB = 16;
+    if (!f) {
+        throw std::runtime_error("could not open file for reading: " + path);
+    }
 
     for(;;) {
         Line line;
@@ -44,19 +46,15 @@ void Document::load(std::string path)
                 ungetc(c, f);
 
                 if (!buf.str().empty()) {
-                    TextPiece piece;
-                    piece.text = buf.str();
-                    if (c == ' ') { piece.space_follows = true; }
-                    else if (c == '\t') { piece.tab_follows = true; }
-                    add_piece(piece);
+                    TextPiece piece(buf.str());
+                    add_piece(std::move(piece));
                 }
                 buf = std::stringstream();
             }
             else if (c == '\n' || c == EOF) {
                 if (!buf.str().empty()) {
-                    TextPiece piece;
-                    piece.text = buf.str();
-                    add_piece(piece);
+                    TextPiece piece(buf.str());
+                    add_piece(std::move(piece));
                 }
                 add_line();
                 buf = std::stringstream();
@@ -79,10 +77,10 @@ void Document::load(std::string path)
 Line& Document::get_line(int number)
 {
     if (number < 0) {
-        throw std::logic_error("line number must not be <0");
+        throw std::out_of_range("invalid line number: #" + std::to_string(number));
     }
     if (size_t(number) < m_lines.size()) {
         return m_lines.at(number);
     }
-    throw std::logic_error("no such line");
+    throw std::out_of_range("line not found: #" + std::to_string(number));
 }

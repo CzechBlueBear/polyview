@@ -29,15 +29,21 @@ uint64_t get_ticks();
 
 using Event = SDL_Event;
 
-//typedef SDL_Event Event;
-
-//class Event;
-//std::unique_ptr<Event> poll_event();
-
 bool poll_event(SDL_Event& event);
 
-const SDL_Color COLOR_WHITE = SDL_Color{ 255, 255, 255, 255 };
-const SDL_Color COLOR_BLACK = SDL_Color{ 0, 0, 0, 255 };
+class Color : public SDL_Color {
+public:
+    Color() {
+        r = 0; g = 0; b = 0; a = 255;
+    }
+    Color(uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_ = 255) {
+        r = r_; g = g_; b = b_; a = a_;
+    }
+    static const Color WHITE;
+    static const Color BLACK;
+};
+
+static_assert(sizeof(Color) == sizeof(SDL_Color));
 
 class Size2d {
 public:
@@ -92,73 +98,7 @@ public:
     bool has_intersection(Rect& other) const { return SDL_HasIntersection(this, &other); }
 };
 
-#if 0
-class MouseMotionEvent;
-class MouseButtonEvent;
-class MouseWheelEvent;
-
-class Event {
-public:
-    enum class Type {
-        UNKNOWN = -1,
-        EMPTY = 0,
-        QUIT_REQUEST,
-        MOUSE_MOTION,
-        MOUSE_BUTTON,
-        MOUSE_WHEEL,
-    };
-    Type type;
-    explicit Event(Type type_) : type(type_) {}
-    Event(Event const&) = delete;
-    virtual MouseMotionEvent& motion() { throw std::logic_error("bad event type"); }
-    virtual MouseButtonEvent& button() { throw std::logic_error("bad event type"); }
-    virtual MouseWheelEvent& wheel() { throw std::logic_error("bad event type"); }
-};
-
-class UnknownEvent : public Event {
-public:
-    UnknownEvent() : Event(Type::UNKNOWN) {}
-};
-
-class EmptyEvent : public Event {
-public:
-    EmptyEvent() : Event(Type::EMPTY) {}
-};
-
-class QuitRequestEvent : public Event {
-public:
-    QuitRequestEvent() : Event(Type::QUIT_REQUEST) {}
-};
-
-class MouseMotionEvent : public Event {
-public:
-    Point2d position;
-    MouseMotionEvent(Point2d position_)
-        : Event(Type::MOUSE_MOTION), position(position_) {}
-    virtual MouseMotionEvent& motion() override { return *this; }
-};
-
-class MouseButtonEvent : public Event {
-public:
-    Point2d position;
-    uint32_t button_index;
-    bool pressed;
-    MouseButtonEvent(Point2d position_, uint32_t b, bool state_)
-        : Event(Type::MOUSE_BUTTON), position(position_), button_index(b), pressed(state_) {}
-    virtual MouseButtonEvent& button() override { return *this; }
-};
-
-class MouseWheelEvent : public Event {
-public:
-    Point2d position;
-    Point2d amount;
-    MouseWheelEvent(Point2d position_, Point2d amount_)
-        : Event(Type::MOUSE_WHEEL), position(position_), amount(amount_) {}
-    virtual MouseWheelEvent& wheel() override { return *this; }
-};
-
-std::unique_ptr<sdl::Event> event_from_sdl(SDL_Event& ev);
-#endif
+static_assert(sizeof(Rect) == sizeof(SDL_Rect));
 
 template<class T> class Wrapper {
 protected:
