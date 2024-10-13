@@ -8,14 +8,14 @@ View::View(std::shared_ptr<Document> document, sdl::Font& font, sdl::Size2d view
     max_lines_visible = viewport_size.h / font.get_line_skip();
 }
 
-void View::render(sdl::Renderer& renderer, sdl::Font& font, sdl::Color& bg_color, sdl::Color& fg_color)
+void View::render(sdl::Renderer& renderer, sdl::Font& font, Settings& settings)
 {
     // spaces between basic elements, in pixels
     auto space_width = font.get_space_width();
     auto line_height = font.get_line_skip();
 
     // clear the viewport
-    renderer.fill_rect(sdl::Rect(0, 0, viewport_size), bg_color);
+    renderer.fill_rect(sdl::Rect(0, 0, viewport_size), settings.background_color);
 
     // how many lines we need to really draw
     auto lines_to_render = std::min(uint32_t(top_line_shown + max_lines_visible), line_count);
@@ -28,7 +28,7 @@ void View::render(sdl::Renderer& renderer, sdl::Font& font, sdl::Color& bg_color
         auto& line = m_document->get_line(i);
         for (auto& piece : line.pieces) {
             if (!piece.empty()) {
-                auto piece_surface = font.render(piece.get_text(), fg_color);
+                auto piece_surface = font.render(piece.get_text(), settings.text_color);
                 auto piece_texture = renderer.texture_from_surface(piece_surface);
                 renderer.put_texture(piece_texture, sdl::Rect(topleft, piece_texture.get_size()));
                 topleft.x += piece_texture.get_size().w + space_width;
@@ -40,17 +40,15 @@ void View::render(sdl::Renderer& renderer, sdl::Font& font, sdl::Color& bg_color
         topleft.y += line_height;
     }
 
-    const uint32_t SCROLLBAR_WIDTH = 16;
-    const sdl::Color SCROLLBAR_COLOR = sdl::Color::WHITE;
-    const sdl::Color SCROLLBAR_BUTTON_COLOR = sdl::Color(192, 192, 255);
+    // draw the scrollbar/mapbar
     renderer.fill_rect(
         sdl::Rect(viewport_size.w - SCROLLBAR_WIDTH, 0, SCROLLBAR_WIDTH, viewport_size.h),
-        SCROLLBAR_COLOR);
-    uint32_t visible_portion = viewport_size.h * max_lines_visible / line_count;
-    uint32_t indicator_height = viewport_size.h * top_line_shown / line_count;
+        settings.widget_background_color);
+    uint32_t indicator_size = std::max(MIN_INDICATOR_SIZE, viewport_size.h * max_lines_visible / line_count);
+    uint32_t indicator_position = viewport_size.h * top_line_shown / line_count;
     renderer.fill_rect(
-        sdl::Rect(viewport_size.w - SCROLLBAR_WIDTH, indicator_height, SCROLLBAR_WIDTH, visible_portion),
-        SCROLLBAR_BUTTON_COLOR);
+        sdl::Rect(viewport_size.w - SCROLLBAR_WIDTH, indicator_position, SCROLLBAR_WIDTH, indicator_size),
+        settings.widget_indicator_color);
 }
 
 void View::scroll_line_up()
@@ -86,6 +84,16 @@ void View::update_viewport_size(sdl::Renderer& renderer, sdl::Font& font)
     viewport_size = renderer.get_output_size();
     max_lines_visible = viewport_size.h / font.get_line_skip();
     scroll_x = 0;
+}
+
+void View::scroll_to_indicator(uint32_t new_indicator_position)
+{
+    top_line_shown = new_indicator_position * line_count / viewport_size.h;
+
+    // don't go past the file end
+    if (top_line_shown + max_lines_visible > line_count) {
+        top_line_shown = line_count - max_lines_visible;
+    }
 }
 
 sdl::Size2d calc_document_bounds(Document& document, sdl::Font& font)

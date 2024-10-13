@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_keycode.h>
+#include <SDL2/SDL_mouse.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_thread.h>
@@ -17,18 +18,11 @@
 #include "sdl_wrapper.hpp"
 #include "document.hpp"
 #include "view.hpp"
+#include "settings.hpp"
 
 std::array<char const*, 2> DEFAULT_FONT_PATHS = {
     "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
     "/usr/share/fonts/TTF/DejaVuSans.ttf"
-};
-
-class Settings {
-public:
-    uint32_t font_size = 32u;
-    sdl::Color background_color = sdl::Color(192, 192, 192);
-    sdl::Color text_color = sdl::Color(0, 0, 0);
-    sdl::Size2d initial_window_size = sdl::Size2d(1024, 1280);
 };
 
 int main(int argc, char** argv)
@@ -60,7 +54,7 @@ int main(int argc, char** argv)
     View view(document, *font, renderer->get_output_size());
 
     auto on_redraw = [&] {
-        view.render(*renderer, *font, settings.background_color, settings.text_color);
+        view.render(*renderer, *font, settings);
         renderer->present();
     };
 
@@ -68,7 +62,7 @@ int main(int argc, char** argv)
 
     // the event loop
     bool exit_requested = false;
-    bool redraw_now = false;
+    bool redraw_now = false;            // if set, redraw frame asap instead of waiting for period
     uint64_t next_frame_time = sdl::get_ticks();
     while (!exit_requested) {
 
@@ -115,11 +109,25 @@ int main(int argc, char** argv)
                     redraw_now = true;
                 }
             }
+            else if (event.type == SDL_MOUSEBUTTONDOWN) {
+                if (event.button.x > int(view.viewport_size.w) - int(view.SCROLLBAR_WIDTH)) {
+                    view.scroll_to_indicator(event.button.y);
+                    redraw_now = true;
+                }
+            }
+            else if (event.type == SDL_MOUSEMOTION) {
+                if (event.motion.state & SDL_BUTTON_LMASK) {
+                    if (event.motion.y >= 0) {
+                        view.scroll_to_indicator(event.motion.y);
+                    }
+                    redraw_now = true;
+                }
+            }
             else if (event.type == SDL_WINDOWEVENT) {
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
                     sdl::Size2d new_window_size = sdl::Size2d(event.window.data1, event.window.data2);
                     view.update_viewport_size(*renderer, *font);
-                    redraw_now = true;  // to my terrible surprise, this really improves visual response
+                    redraw_now = true;
                 }
             }
         }
