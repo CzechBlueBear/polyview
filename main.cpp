@@ -16,6 +16,7 @@
 #include <iostream>
 #include "sdl_wrapper.hpp"
 #include "document.hpp"
+#include "view.hpp"
 
 std::array<char const*, 2> DEFAULT_FONT_PATHS = {
     "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
@@ -53,41 +54,28 @@ int main(int argc, char** argv)
     auto window = std::make_unique<sdl::Window>("Viewer - " + file_name, sdl::Size2d(1024, 1024));
     auto renderer = std::make_unique<sdl::Renderer>(*window);
 
-    auto top_visible_line = 0u;
-    auto left_skip = 0u;
+    View view;
+
     auto lines_visible = renderer->get_output_size().h / font->get_line_skip();
 
     const auto HORIZONTAL_SCROLL_AMOUNT = 128;
     auto space_width = font->get_space_width();
 
     // size, in pixels, of the rendered document, if it would wholly fit
-    auto document_bounds = sdl::Size2d(0, 0);
-    for (auto i = 0u; i < document.size(); i++) {
-        auto& line = document.get_line(i);
-        auto line_bounds = sdl::Size2d(0, 0);
-        for (auto& piece : line.pieces) {
-            auto piece_size = font->calc_rendered_size(piece.get_text());
-            line_bounds.w += piece_size.w;
-            line_bounds.h = std::max(line_bounds.h, piece_size.h);
-        }
-        line_bounds.w += line.pieces.size() * space_width;  // spaces between pieces
-
-        document_bounds.w = std::max(document_bounds.w, line_bounds.w);
-        document_bounds.h += line_bounds.h;
-    }
+    auto document_bounds = calc_document_bounds(document, *font);
     std::cout << "document bounds: " << document_bounds.w << "x" << document_bounds.h << "\n";
 
     auto viewport_size = renderer->get_output_size();
 
     auto on_redraw = [&] {
-        auto topleft = sdl::Point2d(-left_skip, 0);
+        auto topleft = sdl::Point2d(-view.scroll_x, 0);
 
         renderer->fill_rect(sdl::Rect(0, 0, viewport_size), settings.background_color);
 
-        auto lines_to_render = std::min(size_t(top_visible_line + lines_visible), document.size());
+        auto lines_to_render = std::min(size_t(view.top_visible_line + lines_visible), document.size());
 
         // for each line...
-        for (auto i = top_visible_line; i < lines_to_render; i++) {
+        for (auto i = view.top_visible_line; i < lines_to_render; i++) {
 
             // render all pieces on the line
             auto& line = document.get_line(i);
@@ -101,7 +89,7 @@ int main(int argc, char** argv)
             }
 
             // new line
-            topleft.x = -left_skip;
+            topleft.x = -view.scroll_x;
             topleft.y += font->get_line_skip();
         }
 
@@ -128,23 +116,38 @@ int main(int argc, char** argv)
                     break;
                 }
                 else if (event.key.keysym.sym == SDLK_DOWN) {
-                    if (top_visible_line + lines_visible < document.size()) {
-                        top_visible_line++;
+                    if (view.top_visible_line + lines_visible < document.size()) {
+                        view.top_visible_line++;
                     }
                 }
                 else if (event.key.keysym.sym == SDLK_UP) {
-                    if (top_visible_line > 0) {
-                        top_visible_line--;
+                    if (view.top_visible_line > 0) {
+                        view.top_visible_line--;
                     }
                 }
                 else if (event.key.keysym.sym == SDLK_LEFT) {
-                    if (left_skip > 0) {
-                        left_skip -= HORIZONTAL_SCROLL_AMOUNT;
+                    if (view.scroll_x > 0) {
+                        view.scroll_x -= HORIZONTAL_SCROLL_AMOUNT;
                     }
                 }
                 else if (event.key.keysym.sym == SDLK_RIGHT) {
-                    if (left_skip < document_bounds.w - viewport_size.w) {
-                        left_skip += HORIZONTAL_SCROLL_AMOUNT;
+                    if (view.scroll_x < document_bounds.w - viewport_size.w) {
+                        view.scroll_x += HORIZONTAL_SCROLL_AMOUNT;
+                    }
+                }
+                else if (event.key.keysym.sym == SDLK_HOME) {
+                    view.scroll_x = 0;
+                }
+            }
+            else if (event.type == SDL_MOUSEWHEEL) {
+                if (event.wheel.y < 0) {
+                    if (view.top_visible_line + lines_visible < document.size()) {
+                        view.top_visible_line++;
+                    }
+                }
+                else if (event.wheel.y > 0) {
+                    if (view.top_visible_line > 0) {
+                        view.top_visible_line--;
                     }
                 }
             }
