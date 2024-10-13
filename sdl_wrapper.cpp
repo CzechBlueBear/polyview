@@ -192,7 +192,7 @@ void sdl::Renderer::present()
     SDL_RenderPresent(m_inner);
 }
 
-// --- Window ---
+// --- Window ---------------------------------------------------------------
 
 sdl::Window::Window(std::string title, Size2d size)
 {
@@ -210,4 +210,9 @@ sdl::Window::~Window()
     if (m_inner) {
         SDL_DestroyWindow(m_inner);
     }
+}
+
+void sdl::Window::allow_resize()
+{
+    SDL_SetWindowResizable(m_inner, SDL_TRUE);
 }

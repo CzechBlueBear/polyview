@@ -48,19 +48,19 @@ int main(int argc, char** argv)
     const std::string FONT_NAME = "/usr/share/fonts/liberation/LiberationMono-Regular.ttf";
     auto font = std::make_unique<sdl::Font>(FONT_NAME, settings.font_size);
 
-    Document document;
-    document.load(file_name);
-    std::cout << "loaded file: " << file_name << " (" << document.size() << " lines)\n";
+    auto document = std::make_shared<Document>();
+    document->load(file_name);
+    std::cout << "loaded file: " << file_name << " (" << document->size() << " lines)\n";
 
     auto window = std::make_unique<sdl::Window>("Viewer - " + file_name, settings.initial_window_size);
+    window->allow_resize();
+
     auto renderer = std::make_unique<sdl::Renderer>(*window);
 
     View view(document, *font, renderer->get_output_size());
 
-    const auto HORIZONTAL_SCROLL_AMOUNT = 128;
-
     auto on_redraw = [&] {
-        view.render(*renderer, *font, document, settings.background_color, settings.text_color);
+        view.render(*renderer, *font, settings.background_color, settings.text_color);
         renderer->present();
     };
 
@@ -68,6 +68,7 @@ int main(int argc, char** argv)
 
     // the event loop
     bool exit_requested = false;
+    bool redraw_now = false;
     uint64_t next_frame_time = sdl::get_ticks();
     while (!exit_requested) {
 
@@ -84,39 +85,41 @@ int main(int argc, char** argv)
                     break;
                 }
                 else if (event.key.keysym.sym == SDLK_DOWN) {
-                    if (view.top_line_shown + view.lines_visible < document.size()) {
-                        view.top_line_shown++;
-                    }
+                    view.scroll_line_down();
+                    redraw_now = true;
                 }
                 else if (event.key.keysym.sym == SDLK_UP) {
-                    if (view.top_line_shown > 0) {
-                        view.top_line_shown--;
-                    }
+                    view.scroll_line_up();
+                    redraw_now = true;
                 }
                 else if (event.key.keysym.sym == SDLK_LEFT) {
-                    if (view.scroll_x > 0) {
-                        view.scroll_x -= HORIZONTAL_SCROLL_AMOUNT;
-                    }
+                    view.scroll_block_left();
+                    redraw_now = true;
                 }
                 else if (event.key.keysym.sym == SDLK_RIGHT) {
-                    if (view.scroll_x < view.document_size.w - view.viewport_size.w) {
-                        view.scroll_x += HORIZONTAL_SCROLL_AMOUNT;
-                    }
+                    view.scroll_block_right();
+                    redraw_now = true;
                 }
                 else if (event.key.keysym.sym == SDLK_HOME) {
                     view.scroll_x = 0;
+                    redraw_now = true;
                 }
             }
             else if (event.type == SDL_MOUSEWHEEL) {
                 if (event.wheel.y < 0) {
-                    if (view.top_line_shown + view.lines_visible < document.size()) {
-                        view.top_line_shown++;
-                    }
+                    view.scroll_line_down();
+                    redraw_now = true;
                 }
                 else if (event.wheel.y > 0) {
-                    if (view.top_line_shown > 0) {
-                        view.top_line_shown--;
-                    }
+                    view.scroll_line_up();
+                    redraw_now = true;
+                }
+            }
+            else if (event.type == SDL_WINDOWEVENT) {
+                if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    sdl::Size2d new_window_size = sdl::Size2d(event.window.data1, event.window.data2);
+                    view.update_viewport_size(*renderer, *font);
+                    redraw_now = true;  // to my terrible surprise, this really improves visual response
                 }
             }
         }
@@ -125,12 +128,13 @@ int main(int argc, char** argv)
 
         // draw frame
         uint64_t now = sdl::get_ticks();
-        if (now > next_frame_time) {
+        if (redraw_now || now > next_frame_time) {
             on_redraw();
             next_frame_time = sdl::get_ticks() + INTER_FRAME_PERIOD;
         }
         else {
             SDL_Delay(next_frame_time - now);
         }
+        redraw_now = false;
     }
 }

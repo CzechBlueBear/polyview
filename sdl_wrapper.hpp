@@ -183,6 +183,7 @@ public:
     explicit Window(SDL_Window* wrapped) { assert(wrapped); m_inner = wrapped; }
     Window(std::string title, Size2d size);
     ~Window();
+    void allow_resize();
 };
 
 } // namespace sdl
