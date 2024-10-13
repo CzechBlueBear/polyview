@@ -28,13 +28,11 @@ public:
 class Document {
 protected:
     std::vector<Line> m_lines;
-    std::shared_ptr<sdl::Font> m_font;
-    sdl::Color m_text_color = sdl::Color::BLACK;
 
     void add_line();
     void add_piece(TextPiece&& piece);
 public:
-    Document(std::shared_ptr<sdl::Font> font) : m_font(font) {}
+    Document() {}
     void load(std::string path);
     size_t size() const { return m_lines.size(); }
     Line& get_line(int number);

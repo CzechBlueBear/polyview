@@ -65,24 +65,34 @@ void sdl::Font::set_size(uint32_t pt_size)
     TTF_SetFontSize(m_inner, pt_size);
 }
 
-std::unique_ptr<sdl::Surface> sdl::Font::render(std::string text, SDL_Color color)
+sdl::Surface sdl::Font::render(std::string text, SDL_Color color)
 {
     assert(m_inner);
     SDL_Surface* surf = TTF_RenderUTF8_Blended(m_inner, text.c_str(), color);
     if (!surf) {
         throw std::runtime_error("TTF_RenderUTF8_Blended() failed: " + std::string(TTF_GetError()));
     }
-    return std::make_unique<sdl::Surface>(surf);
+    return sdl::Surface(surf);
 }
 
-std::unique_ptr<sdl::Surface> sdl::Font::render_wrapped(std::string text, SDL_Color color, uint32_t max_width)
+sdl::Surface sdl::Font::render_wrapped(std::string text, SDL_Color color, uint32_t max_width)
 {
     assert(m_inner);
     SDL_Surface* surf = TTF_RenderUTF8_Blended_Wrapped(m_inner, text.c_str(), color, max_width);
     if (!surf) {
         throw std::runtime_error("TTF_RenderUTF8_Blended_Wrapped() failed: " + std::string(TTF_GetError()));
     }
-    return std::make_unique<sdl::Surface>(surf);
+    return sdl::Surface(surf);
+}
+
+sdl::Size2d sdl::Font::calc_rendered_size(std::string text)
+{
+    assert(m_inner);
+    int width = 0, height = 0;
+    if (0 != TTF_SizeUTF8(m_inner, text.c_str(), &width, &height)) {
+        throw std::runtime_error("TTF_SizeUTF8() failed: " + std::string(TTF_GetError()));
+    }
+    return sdl::Size2d(width, height);
 }
 
 bool sdl::Font::has_glyph(uint32_t codepoint)
@@ -139,22 +149,22 @@ sdl::Size2d sdl::Renderer::get_output_size()
     return Size2d(width, height);
 }
 
-std::unique_ptr<sdl::Texture> sdl::Renderer::make_texture(uint32_t format, uint32_t access, Size2d size)
+sdl::Texture sdl::Renderer::make_texture(uint32_t format, uint32_t access, Size2d size)
 {
     auto tex = SDL_CreateTexture(m_inner, format, access, size.w, size.h);
     if (!tex) {
         throw std::runtime_error("SDL_CreateTexture() failed: " + sdl::get_error());
     }
-    return std::make_unique<sdl::Texture>(tex);
+    return sdl::Texture(tex);
 }
 
-std::unique_ptr<sdl::Texture> sdl::Renderer::texture_from_surface(sdl::Surface& surface)
+sdl::Texture sdl::Renderer::texture_from_surface(sdl::Surface& surface)
 {
     auto tex = SDL_CreateTextureFromSurface(m_inner, surface);
     if (!tex) {
         throw std::runtime_error("SDL_CreateTextureFromSurface() failed: " + sdl::get_error());
     }
-    return std::make_unique<sdl::Texture>(tex);
+    return sdl::Texture(tex);
 }
 
 void sdl::Renderer::fill_rect(SDL_Rect rect, SDL_Color color)

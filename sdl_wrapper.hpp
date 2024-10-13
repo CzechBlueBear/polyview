@@ -114,6 +114,8 @@ public:
 
 class Surface : public Wrapper<SDL_Surface> {
 public:
+    Surface(Surface& other) = delete;
+    Surface(Surface&& other) = default;
     explicit Surface(SDL_Surface* wrapped) { assert(wrapped); m_inner = wrapped; }
     operator SDL_Surface*() { assert(m_inner); return m_inner; }
     Size2d get_size() { assert(m_inner); return Size2d(m_inner->w, m_inner->h); }
@@ -121,6 +123,8 @@ public:
 
 class Texture : public Wrapper<SDL_Texture> {
 public:
+    Texture(Texture& other) = delete;
+    Texture(Texture&& other) = default;
     explicit Texture(SDL_Texture* wrapped) { assert(wrapped); m_inner = wrapped; }
     operator SDL_Texture*() { assert(m_inner); return m_inner; }
     ~Texture() { if (m_inner) { SDL_DestroyTexture(m_inner); } }
@@ -136,6 +140,8 @@ public:
 
 class Font : public Wrapper<TTF_Font> {
 public:
+    Font(Font& other) = delete;
+    Font(Font&& other) = default;
     explicit Font(TTF_Font* wrapped) { assert(wrapped); m_inner = wrapped; }
     Font(std::string const& name, uint32_t pt_size);
     ~Font() { if (m_inner) { TTF_CloseFont(m_inner); } }
@@ -144,8 +150,9 @@ public:
     uint32_t get_line_skip() { assert(m_inner); return TTF_FontLineSkip(m_inner); }
     uint32_t get_ascent()   { assert(m_inner); return TTF_FontAscent(m_inner); }
     uint32_t get_descent()  { assert(m_inner); return TTF_FontDescent(m_inner); }
-    std::unique_ptr<sdl::Surface> render(std::string text, SDL_Color color);
-    std::unique_ptr<sdl::Surface> render_wrapped(std::string text, SDL_Color color, uint32_t max_width);
+    sdl::Surface render(std::string text, SDL_Color color);
+    sdl::Surface render_wrapped(std::string text, SDL_Color color, uint32_t max_width);
+    sdl::Size2d calc_rendered_size(std::string text);
     bool has_glyph(uint32_t codepoint);
     GlyphMetrics get_glyph_metrics(uint32_t codepoint);
     uint32_t get_space_width();
@@ -155,12 +162,14 @@ class Window;
 
 class Renderer : public Wrapper<SDL_Renderer> {
 public:
+    Renderer(Renderer& other) = delete;
+    Renderer(Renderer&& other) = default;
     explicit Renderer(SDL_Renderer* wrapped) { assert(wrapped); m_inner = wrapped; }
     explicit Renderer(Window& window);
     ~Renderer();
     Size2d get_output_size();
-    std::unique_ptr<Texture> make_texture(uint32_t format, uint32_t access, Size2d size);
-    std::unique_ptr<Texture> texture_from_surface(Surface& surface);
+    Texture make_texture(uint32_t format, uint32_t access, Size2d size);
+    Texture texture_from_surface(Surface& surface);
     void fill_rect(SDL_Rect rect, SDL_Color color);
     void copy_texture(Texture& tex, SDL_Rect target, SDL_Rect source);
     void put_texture(Texture& tex, SDL_Rect target);
@@ -169,6 +178,8 @@ public:
 
 class Window : public Wrapper<SDL_Window> {
 public:
+    Window(Window& other) = delete;
+    Window(Window&& other) = default;
     explicit Window(SDL_Window* wrapped) { assert(wrapped); m_inner = wrapped; }
     Window(std::string title, Size2d size);
     ~Window();

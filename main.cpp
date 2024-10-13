@@ -44,9 +44,9 @@ int main(int argc, char** argv)
     Settings settings;
 
     const std::string FONT_NAME = "/usr/share/fonts/liberation/LiberationMono-Regular.ttf";
-    auto font = std::make_shared<sdl::Font>(FONT_NAME, settings.font_size);
+    auto font = std::make_unique<sdl::Font>(FONT_NAME, settings.font_size);
 
-    Document document(font);
+    Document document;
     document.load(file_name);
     std::cout << "loaded file: " << file_name << " (" << document.size() << " lines)\n";
 
@@ -56,29 +56,29 @@ int main(int argc, char** argv)
     auto top_visible_line = 0u;
     auto left_skip = 0u;
     auto lines_visible = renderer->get_output_size().h / font->get_line_skip();
-    auto max_line_width = 0u;
+
     const auto HORIZONTAL_SCROLL_AMOUNT = 128;
+    auto space_width = font->get_space_width();
 
     auto on_redraw = [&] {
         auto viewport_size = renderer->get_output_size();
-        max_line_width = 0u;
         auto topleft = sdl::Point2d(-left_skip, 0);
 
         renderer->fill_rect(sdl::Rect(0, 0, viewport_size), settings.background_color);
 
+        auto lines_to_render = std::min(size_t(top_visible_line + lines_visible), document.size());
+
         // for each line...
-        for (auto i = top_visible_line; i < std::min(size_t(top_visible_line + lines_visible), document.size()); i++) {
+        for (auto i = top_visible_line; i < lines_to_render; i++) {
 
             // render all pieces on the line
             auto& line = document.get_line(i);
             for (auto& piece : line.pieces) {
                 if (!piece.empty()) {
-                    auto piece_texture = renderer->texture_from_surface(
-                        *font->render(piece.get_text(), sdl::Color::BLACK));
-                    max_line_width = std::max(max_line_width, piece_texture->get_size().w);
-                    renderer->put_texture(*piece_texture, sdl::Rect(topleft, piece_texture->get_size()));
-                    topleft.x += piece_texture->get_size().w;
-                    topleft.x += font->get_space_width();
+                    auto piece_surface = font->render(piece.get_text(), sdl::Color::BLACK);
+                    auto piece_texture = renderer->texture_from_surface(piece_surface);
+                    renderer->put_texture(piece_texture, sdl::Rect(topleft, piece_texture.get_size()));
+                    topleft.x += piece_texture.get_size().w + space_width;
                 }
             }
 
