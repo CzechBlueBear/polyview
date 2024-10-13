@@ -39,6 +39,18 @@ void View::render(sdl::Renderer& renderer, sdl::Font& font, sdl::Color& bg_color
         topleft.x = -scroll_x;
         topleft.y += line_height;
     }
+
+    const uint32_t SCROLLBAR_WIDTH = 16;
+    const sdl::Color SCROLLBAR_COLOR = sdl::Color::WHITE;
+    const sdl::Color SCROLLBAR_BUTTON_COLOR = sdl::Color(192, 192, 255);
+    renderer.fill_rect(
+        sdl::Rect(viewport_size.w - SCROLLBAR_WIDTH, 0, SCROLLBAR_WIDTH, viewport_size.h),
+        SCROLLBAR_COLOR);
+    uint32_t visible_portion = viewport_size.h * max_lines_visible / line_count;
+    uint32_t indicator_height = viewport_size.h * top_line_shown / line_count;
+    renderer.fill_rect(
+        sdl::Rect(viewport_size.w - SCROLLBAR_WIDTH, indicator_height, SCROLLBAR_WIDTH, visible_portion),
+        SCROLLBAR_BUTTON_COLOR);
 }
 
 void View::scroll_line_up()
