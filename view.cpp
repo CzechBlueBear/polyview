@@ -3,9 +3,8 @@
 View::View(std::shared_ptr<Document> document, sdl::Font& font, sdl::Size2d viewport_size_)
     : m_document(document), viewport_size(viewport_size_)
 {
-    line_count = document->size();
     document_size = calc_document_bounds(*document, font);
-    max_lines_visible = viewport_size.h / font.get_line_skip();
+    max_lines_shown = viewport_size.h / font.get_line_skip();
 }
 
 void View::render(sdl::Renderer& renderer, sdl::Font& font, Settings& settings)
@@ -18,7 +17,7 @@ void View::render(sdl::Renderer& renderer, sdl::Font& font, Settings& settings)
     renderer.fill_rect(sdl::Rect(0, 0, viewport_size), settings.background_color);
 
     // how many lines we need to really draw
-    auto lines_to_render = std::min(uint32_t(top_line_shown + max_lines_visible), line_count);
+    auto lines_to_render = std::min(size_t(top_line_shown + max_lines_shown), m_document->size());
 
     // for each line...
     auto topleft = sdl::Point2d(-scroll_x, 0);
@@ -40,15 +39,10 @@ void View::render(sdl::Renderer& renderer, sdl::Font& font, Settings& settings)
         topleft.y += line_height;
     }
 
-    // draw the scrollbar/mapbar
-    renderer.fill_rect(
-        sdl::Rect(viewport_size.w - SCROLLBAR_WIDTH, 0, SCROLLBAR_WIDTH, viewport_size.h),
-        settings.widget_background_color);
-    uint32_t indicator_size = std::max(MIN_INDICATOR_SIZE, viewport_size.h * max_lines_visible / line_count);
-    uint32_t indicator_position = viewport_size.h * top_line_shown / line_count;
-    renderer.fill_rect(
-        sdl::Rect(viewport_size.w - SCROLLBAR_WIDTH, indicator_position, SCROLLBAR_WIDTH, indicator_size),
-        settings.widget_indicator_color);
+    m_scrollbar.place_to_right_edge(renderer); // sdl::Rect(viewport_size.w - SCROLLBAR_WIDTH, 0, SCROLLBAR_WIDTH, viewport_size.h));
+    m_scrollbar.set_full_range(m_document->size());
+    m_scrollbar.set_marked_range(top_line_shown, max_lines_shown);
+    m_scrollbar.render(renderer, settings);
 }
 
 void View::scroll_line_up()
@@ -60,7 +54,7 @@ void View::scroll_line_up()
 
 void View::scroll_line_down()
 {
-    if (top_line_shown + max_lines_visible < line_count) {
+    if (top_line_shown + max_lines_shown < m_document->size()) {
         top_line_shown++;
     }
 }
@@ -82,17 +76,17 @@ void View::scroll_block_right()
 void View::update_viewport_size(sdl::Renderer& renderer, sdl::Font& font)
 {
     viewport_size = renderer.get_output_size();
-    max_lines_visible = viewport_size.h / font.get_line_skip();
+    max_lines_shown = viewport_size.h / font.get_line_skip();
     scroll_x = 0;
 }
 
 void View::scroll_to_indicator(uint32_t new_indicator_position)
 {
-    top_line_shown = new_indicator_position * line_count / viewport_size.h;
+    top_line_shown = new_indicator_position * m_document->size() / viewport_size.h;
 
     // don't go past the file end
-    if (top_line_shown + max_lines_visible > line_count) {
-        top_line_shown = line_count - max_lines_visible;
+    if (top_line_shown + max_lines_shown > m_document->size()) {
+        top_line_shown = m_document->size() - max_lines_shown;
     }
 }
 

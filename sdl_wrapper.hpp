@@ -83,6 +83,7 @@ public:
 class Rect : public SDL_Rect {
     /* SDL_Rect has: int x, int y, int w, int h */
 public:
+    Rect() { x = 0; y = 0; w = 0; h = 0; }
     Rect(int x_, int y_, int w_, int h_)  { x = x_; y = y_; w = w_; h = h_; }
     Rect(Point2d topleft, int w_, int h_) { x = topleft.x; y = topleft.y; w = w_; h = h_; }
     Rect(int x_, int y_, Size2d extents)  { x = x_; y = y_; w = extents.w; h = extents.h; }
