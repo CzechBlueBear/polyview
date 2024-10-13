@@ -60,8 +60,26 @@ int main(int argc, char** argv)
     const auto HORIZONTAL_SCROLL_AMOUNT = 128;
     auto space_width = font->get_space_width();
 
+    // size, in pixels, of the rendered document, if it would wholly fit
+    auto document_bounds = sdl::Size2d(0, 0);
+    for (auto i = 0u; i < document.size(); i++) {
+        auto& line = document.get_line(i);
+        auto line_bounds = sdl::Size2d(0, 0);
+        for (auto& piece : line.pieces) {
+            auto piece_size = font->calc_rendered_size(piece.get_text());
+            line_bounds.w += piece_size.w;
+            line_bounds.h = std::max(line_bounds.h, piece_size.h);
+        }
+        line_bounds.w += line.pieces.size() * space_width;  // spaces between pieces
+
+        document_bounds.w = std::max(document_bounds.w, line_bounds.w);
+        document_bounds.h += line_bounds.h;
+    }
+    std::cout << "document bounds: " << document_bounds.w << "x" << document_bounds.h << "\n";
+
+    auto viewport_size = renderer->get_output_size();
+
     auto on_redraw = [&] {
-        auto viewport_size = renderer->get_output_size();
         auto topleft = sdl::Point2d(-left_skip, 0);
 
         renderer->fill_rect(sdl::Rect(0, 0, viewport_size), settings.background_color);
@@ -125,7 +143,7 @@ int main(int argc, char** argv)
                     }
                 }
                 else if (event.key.keysym.sym == SDLK_RIGHT) {
-                    if (left_skip < 4096) {
+                    if (left_skip < document_bounds.w - viewport_size.w) {
                         left_skip += HORIZONTAL_SCROLL_AMOUNT;
                     }
                 }
