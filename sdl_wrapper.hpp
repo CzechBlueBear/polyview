@@ -3,13 +3,20 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+#include <functional>
 #include <string>               // std::string
 #include <stdexcept>            // std::runtime_error, std::logic_error
 #include <cstdint>              // uint32_t, int32_t etc.
-#include <memory>               // std::unique_ptr
 #include <cassert>              // assert()
 
 namespace sdl {
+
+/**
+ * Initializes SDL and satellite libraries (IMG and TTF), and ensures that
+ * they are automatically deinitialized at the application exit.
+ * Use either this or InitGuard.
+ */
+void auto_init();
 
 /// Ensures that SDL and its satellite libraries are properly initialized,
 /// and deinitialized upon destruction. Can be nested.
@@ -28,6 +35,16 @@ std::string get_error();
 uint64_t get_ticks();
 
 using Event = SDL_Event;
+
+enum EventType : uint32_t {
+    Quit            = SDL_QUIT,
+    KeyDown         = SDL_KEYDOWN,
+    MouseWheel      = SDL_MOUSEWHEEL,
+    MouseButtonDown = SDL_MOUSEBUTTONDOWN,
+    MouseButtonUp   = SDL_MOUSEBUTTONUP,
+    MouseMotion     = SDL_MOUSEMOTION,
+    WindowEvent     = SDL_WINDOWEVENT,
+};
 
 bool poll_event(SDL_Event& event);
 
@@ -72,13 +89,14 @@ public:
 };
 
 /// A point in 2d space with integer coordinates (on screen, surface etc.)
-class Point2d {
+class Point2d : public SDL_Point {
 public:
-    int32_t x, y;
-
-    Point2d() : x(0), y(0) {}
-    Point2d(int32_t x_, int32_t y_) : x(x_), y(y_) {}
+    Point2d() { x = 0; y = 0; }
+    Point2d(int x_, int y_) { x = x_; y = y_; }
+    Point2d(Point2d const&) = default;
 };
+
+static_assert(sizeof(Point2d) == sizeof(SDL_Point));
 
 class Rect : public SDL_Rect {
     /* SDL_Rect has: int x, int y, int w, int h */
@@ -86,8 +104,8 @@ public:
     Rect() { x = 0; y = 0; w = 0; h = 0; }
     Rect(int x_, int y_, int w_, int h_)  { x = x_; y = y_; w = w_; h = h_; }
     Rect(Point2d topleft, int w_, int h_) { x = topleft.x; y = topleft.y; w = w_; h = h_; }
-    Rect(int x_, int y_, Size2d extents)  { x = x_; y = y_; w = extents.w; h = extents.h; }
-    Rect(Point2d topleft, Size2d extents) { x = topleft.x; y = topleft.y; w = extents.w; h = extents.h; }
+    Rect(int x_, int y_, Size2d size)  { x = x_; y = y_; w = size.w; h = size.h; }
+    Rect(Point2d topleft, Size2d size) { x = topleft.x; y = topleft.y; w = size.w; h = size.h; }
     Rect(SDL_Rect &source) : SDL_Rect(source) {}
 
     // empty(), is_empty() are aliases
@@ -97,6 +115,8 @@ public:
     // intersects(), has_intersection() are aliases
     bool intersects(Rect& other) const { return SDL_HasIntersection(this, &other); }
     bool has_intersection(Rect& other) const { return SDL_HasIntersection(this, &other); }
+
+    bool is_point_inside(Point2d point) const { return SDL_PointInRect(&point, this); }
 };
 
 static_assert(sizeof(Rect) == sizeof(SDL_Rect));
@@ -145,6 +165,7 @@ public:
     Font(Font&& other) = default;
     explicit Font(TTF_Font* wrapped) { assert(wrapped); m_inner = wrapped; }
     Font(std::string const& name, uint32_t pt_size);
+    operator TTF_Font*() { return m_inner; }
     ~Font() { if (m_inner) { TTF_CloseFont(m_inner); } }
     void set_size(uint32_t pt_size);
     bool is_fixed_width()   { assert(m_inner); return TTF_FontFaceIsFixedWidth(m_inner); }
@@ -171,9 +192,13 @@ public:
     Size2d get_output_size();
     Texture make_texture(uint32_t format, uint32_t access, Size2d size);
     Texture texture_from_surface(Surface& surface);
+    Texture surface_to_texture(Surface& surface) { return texture_from_surface(surface); }
+    void clear(SDL_Color color);
     void fill_rect(SDL_Rect rect, SDL_Color color);
-    void copy_texture(Texture& tex, SDL_Rect target, SDL_Rect source);
+    void put_texture(Texture& tex, sdl::Point2d topleft);
     void put_texture(Texture& tex, SDL_Rect target);
+    void put_texture_part(Texture& tex, SDL_Rect target, SDL_Rect source);
+    void put_text(Font& font, sdl::Point2d topleft, std::string text, sdl::Color color);
     void present();
 };
 
@@ -185,6 +210,22 @@ public:
     Window(std::string title, Size2d size);
     ~Window();
     void allow_resize();
+};
+
+enum class MouseButton {
+    Left = 0,
+    Middle,
+    Right
+};
+
+class EventQueue {
+public:
+    void process();
+    std::function<void()> on_quit_request;
+    std::function<void(Point2d)> on_mouse_motion;
+    std::function<void(Point2d, MouseButton, bool)> on_mouse_button;
+    std::function<void(Point2d, int)> on_mouse_wheel;
+    std::function<void(SDL_Keysym, bool)> on_key;
 };
 
 } // namespace sdl

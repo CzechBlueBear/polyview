@@ -27,7 +27,7 @@ std::array<char const*, 2> DEFAULT_FONT_PATHS = {
 
 int main(int argc, char** argv)
 {
-    sdl::InitGuard guard;
+    sdl::auto_init();
 
     setlocale(LC_ALL,"");
 
@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     Settings settings;
 
     const std::string FONT_NAME = "/usr/share/fonts/liberation/LiberationMono-Regular.ttf";
-    auto font = std::make_unique<sdl::Font>(FONT_NAME, settings.font_size);
+    auto font = std::make_shared<sdl::Font>(FONT_NAME, settings.font_size);
 
     auto document = std::make_shared<Document>();
     document->load(file_name);
@@ -51,14 +51,16 @@ int main(int argc, char** argv)
 
     auto renderer = std::make_unique<sdl::Renderer>(*window);
 
-    View view(document, *font, renderer->get_output_size());
+    View view(document, font, renderer->get_output_size());
 
     auto on_redraw = [&] {
-        view.render(*renderer, *font, settings);
+        view.render(*renderer, settings);
         renderer->present();
     };
 
     const uint64_t INTER_FRAME_PERIOD = 16;
+
+    sdl::EventQueue events;
 
     // the event loop
     bool exit_requested = false;
@@ -69,11 +71,11 @@ int main(int argc, char** argv)
         // handle all pending events
         sdl::Event event;
         while (sdl::poll_event(event)) {
-            if (event.type == SDL_QUIT) {
+            if (event.type == sdl::EventType::Quit) {
                 exit_requested = true;
                 break;
             }
-            else if (event.type == SDL_KEYDOWN) {
+            else if (event.type == sdl::EventType::KeyDown) {
                 if (event.key.keysym.sym == SDLK_ESCAPE) {
                     exit_requested = true;
                     break;
@@ -99,7 +101,7 @@ int main(int argc, char** argv)
                     redraw_now = true;
                 }
             }
-            else if (event.type == SDL_MOUSEWHEEL) {
+            else if (event.type == sdl::EventType::MouseWheel) {
                 if (event.wheel.y < 0) {
                     view.scroll_line_down();
                     redraw_now = true;
@@ -109,24 +111,25 @@ int main(int argc, char** argv)
                     redraw_now = true;
                 }
             }
-            else if (event.type == SDL_MOUSEBUTTONDOWN) {
-                if (event.button.x > int(view.viewport_size.w) - int(view.SCROLLBAR_WIDTH)) {
+            else if (event.type == sdl::EventType::MouseButtonDown) {
+                if (view.get_scrollbar().is_point_inside(sdl::Point2d(event.button.x, event.button.y))) {
                     view.scroll_to_indicator(event.button.y);
                     redraw_now = true;
                 }
             }
-            else if (event.type == SDL_MOUSEMOTION) {
+            else if (event.type == sdl::EventType::MouseMotion) {
                 if (event.motion.state & SDL_BUTTON_LMASK) {
-                    if (event.motion.y >= 0) {
-                        view.scroll_to_indicator(event.motion.y);
+                    if (view.get_scrollbar().is_point_inside(sdl::Point2d(event.motion.x, event.motion.y))) {
+                        if (event.motion.y >= 0) {
+                            view.scroll_to_indicator(event.motion.y);
+                        }
                     }
                     redraw_now = true;
                 }
             }
-            else if (event.type == SDL_WINDOWEVENT) {
+            else if (event.type == sdl::EventType::WindowEvent) {
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    sdl::Size2d new_window_size = sdl::Size2d(event.window.data1, event.window.data2);
-                    view.update_viewport_size(*renderer, *font);
+                    view.update_viewport_size(*renderer);
                     redraw_now = true;
                 }
             }

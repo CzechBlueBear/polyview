@@ -1,6 +1,21 @@
 #include "sdl_wrapper.hpp"
 #include <SDL2/SDL_image.h>
 
+void sdl::auto_init() {
+    if (0 != SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_AUDIO|SDL_INIT_EVENTS)) {
+        throw std::runtime_error("SDL_Init() failed: " + sdl::get_error());
+    }
+    atexit(SDL_Quit);
+    if (IMG_Init(IMG_INIT_JPG|IMG_INIT_PNG) != (IMG_INIT_JPG|IMG_INIT_PNG)) {
+        throw std::runtime_error("IMG_Init() failed: " + std::string(IMG_GetError()));
+    }
+    atexit(IMG_Quit);
+    if (0 != TTF_Init()) {
+        throw std::runtime_error("TTF_Init() failed: " + std::string(TTF_GetError()));
+    }
+    atexit(TTF_Quit);
+}
+
 sdl::InitGuard::InitGuard() {
     if (0 != SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_AUDIO|SDL_INIT_EVENTS)) {
         throw std::runtime_error("SDL_Init() failed: " + sdl::get_error());
@@ -35,7 +50,7 @@ bool sdl::poll_event(SDL_Event& event) {
     return !!SDL_PollEvent(&event);
 }
 
-// --- sdl::Texture ---
+// sdl::Texture --------------------------------------------------------------
 
 sdl::Size2d sdl::Texture::get_size()
 {
@@ -49,7 +64,7 @@ sdl::Size2d sdl::Texture::get_size()
     return Size2d(w, h);
 }
 
-// --- sdl::Font ---
+// sdl::Font -----------------------------------------------------------------
 
 sdl::Font::Font(std::string const& name, uint32_t pt_size)
 {
@@ -125,7 +140,7 @@ uint32_t sdl::Font::get_space_width()
     return advance;
 }
 
-// --- sdl::Renderer ---
+// sdl::Renderer -------------------------------------------------------------
 
 sdl::Renderer::Renderer(sdl::Window& window)
 {
@@ -167,24 +182,42 @@ sdl::Texture sdl::Renderer::texture_from_surface(sdl::Surface& surface)
     return sdl::Texture(tex);
 }
 
+void sdl::Renderer::clear(SDL_Color color)
+{
+    SDL_SetRenderDrawColor(m_inner, color.r, color.g, color.b, color.a);
+    SDL_RenderClear(m_inner);
+}
+
 void sdl::Renderer::fill_rect(SDL_Rect rect, SDL_Color color)
 {
     SDL_SetRenderDrawColor(m_inner, color.r, color.g, color.b, color.a);
     SDL_RenderFillRect(m_inner, &rect);
 }
 
+void sdl::Renderer::put_texture(Texture& tex, sdl::Point2d topleft)
+{
+    put_texture(tex, sdl::Rect(topleft, tex.get_size()));
+}
+
 void sdl::Renderer::put_texture(Texture& tex, SDL_Rect target)
 {
-    if (0 != SDL_RenderCopy(m_inner, tex.peek(), nullptr, &target)) {
+    if (0 != SDL_RenderCopy(m_inner, tex, nullptr, &target)) {
         throw std::runtime_error("SDL_RenderCopy() failed: " + sdl::get_error());
     }
 }
 
-void sdl::Renderer::copy_texture(Texture& tex, SDL_Rect target, SDL_Rect source)
+void sdl::Renderer::put_texture_part(Texture& tex, SDL_Rect target, SDL_Rect source)
 {
     if (0 != SDL_RenderCopy(m_inner, tex.peek(), &source, &target)) {
         throw std::runtime_error("SDL_RenderCopy() failed: " + sdl::get_error());
     }
+}
+
+void sdl::Renderer::put_text(Font& font, sdl::Point2d topleft, std::string text, sdl::Color color)
+{
+    auto surface = font.render(text, color);
+    auto texture = texture_from_surface(surface);
+    put_texture(texture, sdl::Rect(topleft, texture.get_size()));
 }
 
 void sdl::Renderer::present()
@@ -192,7 +225,7 @@ void sdl::Renderer::present()
     SDL_RenderPresent(m_inner);
 }
 
-// --- Window ---------------------------------------------------------------
+// Window --------------------------------------------------------------------
 
 sdl::Window::Window(std::string title, Size2d size)
 {
@@ -215,4 +248,40 @@ sdl::Window::~Window()
 void sdl::Window::allow_resize()
 {
     SDL_SetWindowResizable(m_inner, SDL_TRUE);
+}
+
+// EventQueue ----------------------------------------------------------------
+
+void sdl::EventQueue::process()
+{
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+        case SDL_QUIT:
+            if (!!on_quit_request) {
+                on_quit_request();
+            }
+            break;
+        case SDL_KEYDOWN:
+            if (!!on_key) {
+                on_key(event.key.keysym, true);
+            }
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            if (!!on_mouse_button) {
+                on_mouse_button(
+                    Point2d(event.button.x, event.button.y),
+                    MouseButton(event.button.button),
+                    true);
+            }
+            break;
+        case SDL_MOUSEBUTTONUP:
+            if (!!on_mouse_button) {
+                on_mouse_button(
+                    Point2d(event.button.x, event.button.y),
+                    MouseButton(event.button.button),
+                    false);
+            }
+        }
+    }
 }

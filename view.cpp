@@ -1,17 +1,17 @@
 #include "view.hpp"
 
-View::View(std::shared_ptr<Document> document, sdl::Font& font, sdl::Size2d viewport_size_)
-    : m_document(document), viewport_size(viewport_size_)
+View::View(std::shared_ptr<Document> document, std::shared_ptr<sdl::Font> font, sdl::Size2d viewport_size_)
+    : m_document(document), m_font(font), viewport_size(viewport_size_)
 {
-    document_size = calc_document_bounds(*document, font);
-    max_lines_shown = viewport_size.h / font.get_line_skip();
+    document_size = calc_document_bounds(*document, *font);
+    max_lines_shown = viewport_size.h / font->get_line_skip();
 }
 
-void View::render(sdl::Renderer& renderer, sdl::Font& font, Settings& settings)
+void View::render(sdl::Renderer& renderer, Settings& settings)
 {
     // spaces between basic elements, in pixels
-    auto space_width = font.get_space_width();
-    auto line_height = font.get_line_skip();
+    auto space_width = m_font->get_space_width();
+    auto line_height = m_font->get_line_skip();
 
     // clear the viewport
     renderer.fill_rect(sdl::Rect(0, 0, viewport_size), settings.background_color);
@@ -27,7 +27,7 @@ void View::render(sdl::Renderer& renderer, sdl::Font& font, Settings& settings)
         auto& line = m_document->get_line(i);
         for (auto& piece : line.pieces) {
             if (!piece.empty()) {
-                auto piece_surface = font.render(piece.get_text(), settings.text_color);
+                auto piece_surface = m_font->render(piece.get_text(), settings.text_color);
                 auto piece_texture = renderer.texture_from_surface(piece_surface);
                 renderer.put_texture(piece_texture, sdl::Rect(topleft, piece_texture.get_size()));
                 topleft.x += piece_texture.get_size().w + space_width;
@@ -73,10 +73,10 @@ void View::scroll_block_right()
     }
 }
 
-void View::update_viewport_size(sdl::Renderer& renderer, sdl::Font& font)
+void View::update_viewport_size(sdl::Renderer& renderer)
 {
     viewport_size = renderer.get_output_size();
-    max_lines_shown = viewport_size.h / font.get_line_skip();
+    max_lines_shown = viewport_size.h / m_font->get_line_skip();
     scroll_x = 0;
 }
 

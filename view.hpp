@@ -4,10 +4,12 @@
 #include "document.hpp"
 #include "settings.hpp"
 #include "widget.hpp"
+#include <memory>
 
-class View {
+class View : public virtual Widget {
 protected:
     std::shared_ptr<Document> m_document;
+    std::shared_ptr<sdl::Font> m_font;
     VScrollbar m_scrollbar;
 public:
     const uint32_t HORIZONTAL_SCROLL_AMOUNT = 128;
@@ -20,14 +22,24 @@ public:
     sdl::Size2d viewport_size;          ///< Size of the area used for view, in pixels.
     sdl::Size2d document_size;          ///< Document size in pixels.
 
-    View(std::shared_ptr<Document> document, sdl::Font& font, sdl::Size2d viewport_size_);
-    void render(sdl::Renderer& renderer, sdl::Font& font, Settings& settings);
+    View(std::shared_ptr<Document> document, std::shared_ptr<sdl::Font> font, sdl::Size2d viewport_size_);
     void scroll_line_up();
     void scroll_line_down();
     void scroll_block_left();
     void scroll_block_right();
-    void update_viewport_size(sdl::Renderer& renderer, sdl::Font& font);
+    void update_viewport_size(sdl::Renderer& renderer);
     void scroll_to_indicator(uint32_t new_indicator_position);
+    VScrollbar& get_scrollbar() { return m_scrollbar; }
+
+    void render(sdl::Renderer& renderer, Settings& settings) override;
+    WidgetSizingInfo get_sizing_info() override {
+        return WidgetSizingInfo {
+            .min_width = 128u,
+            .min_height = 128u,
+            .grow_x = true,
+            .grow_y = true
+        };
+    }
 };
 
 sdl::Size2d calc_document_bounds(Document& document, sdl::Font& font);

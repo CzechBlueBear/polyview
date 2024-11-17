@@ -10,5 +10,6 @@ public:
     sdl::Color text_color       = sdl::Color(0, 0, 0);
     sdl::Color widget_background_color = sdl::Color(248, 255, 248);
     sdl::Color widget_indicator_color = sdl::Color(127, 127, 255);
+    sdl::Color widget_text_color      = sdl::Color(16, 16, 16);
     sdl::Size2d initial_window_size = sdl::Size2d(1024, 1280);
 };
