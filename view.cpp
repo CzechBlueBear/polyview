@@ -7,6 +7,8 @@ View::View(std::shared_ptr<Document> document, std::shared_ptr<sdl::Font> font, 
     max_lines_shown = viewport_size.h / font->get_line_skip();
 }
 
+const uint32_t PADDING_TOP = 4;
+
 void View::render(sdl::Renderer& renderer, Settings& settings)
 {
     // spaces between basic elements, in pixels
@@ -20,15 +22,14 @@ void View::render(sdl::Renderer& renderer, Settings& settings)
     auto lines_to_render = std::min(size_t(top_line_shown + max_lines_shown), m_document->size());
 
     // for each line...
-    auto topleft = sdl::Point2d(-scroll_x, 0);
+    auto topleft = sdl::Point2d(-scroll_x, PADDING_TOP);
     for (auto i = top_line_shown; i < lines_to_render; i++) {
 
         // render all pieces on the line (for long lines, some may not be visible)
         auto& line = m_document->get_line(i);
         for (auto& piece : line.pieces) {
             if (!piece.empty()) {
-                auto piece_surface = m_font->render(piece.get_text(), settings.text_color);
-                auto piece_texture = renderer.texture_from_surface(piece_surface);
+                auto piece_texture = m_font->render_to_texture(renderer, piece.get_text(), settings.text_color);
                 renderer.put_texture(piece_texture, sdl::Rect(topleft, piece_texture.get_size()));
                 topleft.x += piece_texture.get_size().w + space_width;
             }
@@ -39,7 +40,7 @@ void View::render(sdl::Renderer& renderer, Settings& settings)
         topleft.y += line_height;
     }
 
-    m_scrollbar.place_to_right_edge(renderer); // sdl::Rect(viewport_size.w - SCROLLBAR_WIDTH, 0, SCROLLBAR_WIDTH, viewport_size.h));
+    //m_scrollbar.place_to_right_edge(renderer); // sdl::Rect(viewport_size.w - SCROLLBAR_WIDTH, 0, SCROLLBAR_WIDTH, viewport_size.h));
     m_scrollbar.set_full_range(m_document->size());
     m_scrollbar.set_marked_range(top_line_shown, max_lines_shown);
     m_scrollbar.render(renderer, settings);

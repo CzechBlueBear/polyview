@@ -5,7 +5,7 @@
 
 class Settings {
 public:
-    uint32_t font_size = 32u;
+    uint32_t font_size = 42u;
     sdl::Color background_color = sdl::Color(192, 192, 192);
     sdl::Color text_color       = sdl::Color(0, 0, 0);
     sdl::Color widget_background_color = sdl::Color(248, 255, 248);

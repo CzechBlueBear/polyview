@@ -159,6 +159,8 @@ public:
     int32_t advance = 0;
 };
 
+class Renderer;
+
 class Font : public Wrapper<TTF_Font> {
 public:
     Font(Font& other) = delete;
@@ -172,10 +174,24 @@ public:
     uint32_t get_line_skip() { assert(m_inner); return TTF_FontLineSkip(m_inner); }
     uint32_t get_ascent()   { assert(m_inner); return TTF_FontAscent(m_inner); }
     uint32_t get_descent()  { assert(m_inner); return TTF_FontDescent(m_inner); }
+
+    /// Renders the given text using this font and color into a newly
+    /// produced surface. The background of the surface is transparent.
     sdl::Surface render(std::string text, SDL_Color color);
-    sdl::Surface render_wrapped(std::string text, SDL_Color color, uint32_t max_width);
+
+    /// Renders the given text using this font and color into a texture
+    /// compatible with the renderer. The background is transparent.
+    sdl::Texture render_to_texture(sdl::Renderer& renderer, std::string text, SDL_Color color);
+
+    /// Calculates the size of the surface that would be produced
+    /// by rendering the given text with this font.
     sdl::Size2d calc_rendered_size(std::string text);
+
+    sdl::Surface render_wrapped(std::string text, SDL_Color color, uint32_t max_width);
+
+    /// Checks if the font contains a glyph with that codepoint.
     bool has_glyph(uint32_t codepoint);
+
     GlyphMetrics get_glyph_metrics(uint32_t codepoint);
     uint32_t get_space_width();
 };

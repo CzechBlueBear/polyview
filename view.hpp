@@ -15,6 +15,7 @@ public:
     const uint32_t HORIZONTAL_SCROLL_AMOUNT = 128;
     const uint32_t SCROLLBAR_WIDTH = 32;
     const uint32_t MIN_INDICATOR_SIZE = 8;
+    const uint32_t PADDING_TOP = 4;
 
     uint32_t top_line_shown = 0u;       ///< Top line shown in the view.
     uint32_t max_lines_shown = 0u;      ///< Max number of lines visible at once in the view.

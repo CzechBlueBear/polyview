@@ -90,6 +90,15 @@ sdl::Surface sdl::Font::render(std::string text, SDL_Color color)
     return sdl::Surface(surf);
 }
 
+sdl::Texture sdl::Font::render_to_texture(sdl::Renderer& renderer, std::string text, SDL_Color color)
+{
+    assert(m_inner);
+    auto surf = render(text, color);
+    auto tex = renderer.texture_from_surface(surf);
+    return tex;
+    // surf is automatically freed
+}
+
 sdl::Surface sdl::Font::render_wrapped(std::string text, SDL_Color color, uint32_t max_width)
 {
     assert(m_inner);
