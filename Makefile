@@ -8,3 +8,6 @@ HEADERS=sdl_wrapper.hpp document.hpp view.hpp settings.hpp widget.hpp
 
 app: sdl_wrapper.o document.o main.o view.o widget.o
 	c++ $^ -o $@ ${LIBS}
+
+clean:
+	rm *.o app
