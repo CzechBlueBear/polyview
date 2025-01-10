@@ -116,11 +116,14 @@ public:
     bool intersects(Rect& other) const { return SDL_HasIntersection(this, &other); }
     bool has_intersection(Rect& other) const { return SDL_HasIntersection(this, &other); }
 
+    // contains(), is_point_inside() are aliases
+    bool contains(Point2d point) const { return SDL_PointInRect(&point, this); }
     bool is_point_inside(Point2d point) const { return SDL_PointInRect(&point, this); }
 };
 
 static_assert(sizeof(Rect) == sizeof(SDL_Rect));
 
+/// Wrapper for a SDL structure; call peek() to get the wrapped structure.
 template<class T> class Wrapper {
 protected:
     T* m_inner;

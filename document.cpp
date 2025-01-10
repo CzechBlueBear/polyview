@@ -37,7 +37,7 @@ void Document::load(std::string path)
         int column = 0;
         std::stringstream buf;
         for(;;) {
-            if (c == ' ' || c == '\t') {
+            if (flag_coalesce_spaces && (c == ' ' || c == '\t')) {
 
                 // skip a run of whitespaces
                 while (c == ' ' || c == '\t') {
@@ -60,7 +60,7 @@ void Document::load(std::string path)
                 buf = std::stringstream();
                 break;
             }
-            else if (c < ' ') {
+            else if (c < ' ') {     // nonprintable characters
                 buf.put('?');
             }
             else {
